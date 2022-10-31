@@ -8,6 +8,7 @@
     "clean": "rm -rf dist",
     "build": "yarn clean && tsc --build",
     "start": "ts-node index.ts",
+    "start-prod": "node dist/index.js",
     "transpile": "babel index.js -d dist; babel -d ./dist/src ./src",
     "dev": "nodemon index.ts"
   },
