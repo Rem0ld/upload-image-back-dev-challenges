@@ -1,6 +1,7 @@
 import {
   ClassErrorMiddleware,
   Controller,
+  Get,
   Middleware,
   Post,
 } from "@overnightjs/core";
@@ -56,9 +57,16 @@ const upload = multer({ storage, limits: { fieldSize: MAX_SIZE } }).single(
 export default class ImageController {
   constructor() {}
 
+  @Get("health")
+  private getHealth(req: Request, res: Response) {
+    res.status(200).json("ok");
+    return;
+  }
+
   @Post("upload")
   @Middleware([upload])
   private post(req: Request, res: Response) {
     res.status(200).json(req.file.filename);
+    return;
   }
 }
