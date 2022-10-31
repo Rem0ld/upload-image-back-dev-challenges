@@ -1,51 +1,64 @@
 import {
   ClassErrorMiddleware,
   Controller,
-  Get,
   Middleware,
   Post,
 } from "@overnightjs/core";
-import { NextFunction, Request, Response } from "express";
-import ImageService from "./Image.service";
-import { readdir } from "node:fs/promises";
+import { Request, Response } from "express";
 import path from "path";
 import multer from "multer";
 import errorHandler from "../../services/errorHandler";
 
+const authorizedfile = ["jpeg", "jpg", "png", "gif"];
+const MAX_SIZE = 1048576;
+
 const pathToImages = path.join(__dirname, "../../../public/images");
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    const { mimetype } = file;
+    if (+req.headers["content-length"] > MAX_SIZE) {
+      cb(
+        new Error(
+          `Maximum file size is ${Math.floor(MAX_SIZE / 1024 / 1000)} mb`
+        ),
+        pathToImages
+      );
+      return;
+    }
+    if (
+      !authorizedfile.includes(mimetype.substring(mimetype.indexOf("/") + 1))
+    ) {
+      console.log("here");
+      cb(
+        new Error(`file accepted are ${authorizedfile.join(", ")}`),
+        pathToImages
+      );
+      return;
+    }
     cb(null, pathToImages);
+    return;
   },
-  filename: function (req, file, cb) {
+  filename: function (_req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(
       null,
       file.fieldname + "-" + uniqueSuffix + `${path.extname(file.originalname)}`
     );
+    return;
   },
 });
-const upload = multer({ storage }).single("file");
+const upload = multer({ storage, limits: { fieldSize: MAX_SIZE } }).single(
+  "file"
+);
 
 @Controller("api/images")
 @ClassErrorMiddleware(errorHandler)
 export default class ImageController {
-  constructor(private service: ImageService) {}
-
-  @Get()
-  private async get(_req: Request, res: Response, next: NextFunction) {
-    try {
-      const files = await readdir(pathToImages);
-
-      return res.json(files);
-    } catch (error) {
-      next(error);
-    }
-  }
+  constructor() {}
 
   @Post("upload")
   @Middleware([upload])
-  private post(req: Request, res: Response, next: NextFunction) {
+  private post(req: Request, res: Response) {
     res.status(200).json(req.file.filename);
   }
 }
